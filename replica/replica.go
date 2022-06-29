@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"github.com/relab/gorums"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/backend"
@@ -139,7 +138,7 @@ func (srv *Replica) Start() {
 				if time.Now().Sub(lasttime) > 5*time.Millisecond {
 					lasttime = time.Now()
 					batch, ok := srv.mulChain.packBatch(ctx, srv.clientSrv.cmdCache)
-					if ok || srv.mulChain.CanUpdateMyTip {
+					if ok { //|| srv.mulChain.CanUpdateMyTip {
 						srv.mulChain.Add(srv.mulChain.NodeID, &batch)
 						//println("nodeid:", srv.mulChain.NodeID, "  success pack a batch,batchsize:", batch.BatchID)
 						srv.hs.Configuration().ProposeBatchMultiCast(&batch)
@@ -152,26 +151,26 @@ func (srv *Replica) Start() {
 
 	go func() {
 		srv.Run(ctx)
-		fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[1], "total len ", len(srv.mulChain.ChainPool[1]))
-		for _, v := range srv.mulChain.ChainPool[1] {
-			fmt.Print(v.BatchID, " ")
-		}
-		fmt.Println()
-		fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[2], "total len ", len(srv.mulChain.ChainPool[2]))
-		for _, v := range srv.mulChain.ChainPool[2] {
-			fmt.Print(v.BatchID, " ")
-		}
-		fmt.Println()
-		fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[3], "total len ", len(srv.mulChain.ChainPool[3]))
-		for _, v := range srv.mulChain.ChainPool[3] {
-			fmt.Print(v.BatchID, " ")
-		}
-		fmt.Println()
-		fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[4], "total len ", len(srv.mulChain.ChainPool[4]))
-		for _, v := range srv.mulChain.ChainPool[4] {
-			fmt.Print(v.BatchID, " ")
-		}
-		fmt.Println()
+		//fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[1], "total len ", len(srv.mulChain.ChainPool[1]))
+		//for _, v := range srv.mulChain.ChainPool[1] {
+		//	fmt.Print(v.BatchID, " ")
+		//}
+		//fmt.Println()
+		//fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[2], "total len ", len(srv.mulChain.ChainPool[2]))
+		//for _, v := range srv.mulChain.ChainPool[2] {
+		//	fmt.Print(v.BatchID, " ")
+		//}
+		//fmt.Println()
+		//fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[3], "total len ", len(srv.mulChain.ChainPool[3]))
+		//for _, v := range srv.mulChain.ChainPool[3] {
+		//	fmt.Print(v.BatchID, " ")
+		//}
+		//fmt.Println()
+		//fmt.Println("nodeid:", srv.hs.ID(), "packed height:", srv.mulChain.PackagedHeight[4], "total len ", len(srv.mulChain.ChainPool[4]))
+		//for _, v := range srv.mulChain.ChainPool[4] {
+		//	fmt.Print(v.BatchID, " ")
+		//}
+		//fmt.Println()
 		close(srv.done)
 	}()
 }

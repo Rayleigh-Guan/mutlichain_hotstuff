@@ -86,7 +86,7 @@ func (c *MultiChain) deleteByHash(h consensus.Hash) {
 
 func (c *MultiChain) packBatch(ctx context.Context, cache *cmdCache) (batch consensus.Batch, ok bool) {
 	cmd, ok := cache.Get(ctx)
-	if (!ok) && (c.CanUpdateMyTip) {
+	if (!ok) && (!c.CanUpdateMyTip) {
 		return batch, false
 	}
 	var genesisHash [32]byte
@@ -141,7 +141,7 @@ func (c *MultiChain) PackList() (batchlist consensus.BatchList, ok bool) {
 			nNotFallBehind := 0
 			for j := 1; j <= c.ReplicaNum; j++ {
 				temptip := c.ChainPoolTip[hotstuff.ID(j)][uint32(i)]
-				if temptip <= 0 || temptip <= startHeight {
+				if temptip <= 0 || temptip < startHeight {
 					continue
 				}
 				nNotFallBehind = nNotFallBehind + 1

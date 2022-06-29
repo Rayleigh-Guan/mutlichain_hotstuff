@@ -72,6 +72,7 @@ type Client struct {
 	stepUp           float64
 	stepUpInterval   time.Duration
 	timeout          time.Duration
+	averagelatency   float64
 }
 
 // New returns a new Client.
@@ -89,6 +90,7 @@ func New(conf Config, builder modules.Builder) (client *Client) {
 		stepUp:           conf.RateStep,
 		stepUpInterval:   conf.RateStepInterval,
 		timeout:          conf.Timeout,
+		averagelatency:   0,
 	}
 
 	grpcOpts := []grpc.DialOption{grpc.WithBlock()}
@@ -244,8 +246,9 @@ loop:
 			break loop
 		}
 
-		if num%100 == 0 {
+		if num%1000 == 0 {
 			c.mods.Logger().Infof("%d commands sent", num)
+			c.mods.Logger().Info("excuted req: ", c.highestCommitted, " average latency: ", c.averagelatency/float64(c.highestCommitted))
 		}
 
 	}
@@ -289,6 +292,7 @@ func (c *Client) handleCommands(ctx context.Context) (executed, failed, timeout 
 		c.mut.Unlock()
 
 		duration := time.Since(cmd.sendTime)
+		c.averagelatency = (c.averagelatency + float64(duration.Milliseconds()))
 		c.mods.EventLoop().AddEvent(LatencyMeasurementEvent{Latency: duration})
 	}
 }

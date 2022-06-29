@@ -2,6 +2,8 @@ package consensus
 
 import (
 	"fmt"
+	"github.com/relab/hotstuff/internal/proto/clientpb"
+	"google.golang.org/protobuf/proto"
 	"sync"
 	"time"
 )
@@ -37,6 +39,8 @@ type consensusBase struct {
 	mut              sync.Mutex
 	bExec            *Block
 	batchlistinblock map[Hash]*BatchList
+	totalnum         int
+	startime         int64
 }
 
 // New returns a new Consensus instance based on the given Rules implementation.
@@ -46,6 +50,8 @@ func New(impl Rules) Consensus {
 		lastVote:         0,
 		bExec:            GetGenesis(),
 		batchlistinblock: make(map[Hash]*BatchList),
+		totalnum:         0,
+		startime:         time.Now().UnixMilli(),
 	}
 }
 
@@ -94,7 +100,7 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 		qcBlock, ok := cs.mods.BlockChain().Get(qc.BlockHash())
 		if !ok {
 			cs.mods.Logger().Errorf("Could not find block for QC: %s", qc)
-			fmt.Println("Node id: ", cs.mods.ID(), "--faild to Mzpropose because can not find qc.block，qc.block hash is:", qc.BlockHash().String(), " --view:", cs.mods.Synchronizer().View())
+			//fmt.Println("Node id: ", cs.mods.ID(), "--faild to Mzpropose because can not find qc.block，qc.block hash is:", qc.BlockHash().String(), " --view:", cs.mods.Synchronizer().View())
 			return
 		}
 		cs.mods.Acceptor().Proposed(qcBlock.Command())
@@ -102,7 +108,7 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 
 	batchlist, ok := cs.mods.multichainlist.PackList()
 	if !ok {
-		fmt.Println("Node id: ", cs.mods.ID(), "--faild to Mzpropose because can not get batchlist --view:", cs.mods.Synchronizer().View())
+		//fmt.Println("Node id: ", cs.mods.ID(), "--faild to Mzpropose because can not get batchlist --view:", cs.mods.Synchronizer().View())
 		cs.mods.Logger().Debug("Propose: No command")
 		return
 	}
@@ -133,7 +139,7 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 			block.Hash(),
 		),
 	}
-	fmt.Println("Node id: ", cs.mods.ID(), " success create a mzpropose blockhash :", block.Hash().String(), "at time: ", time.Now().UnixMilli())
+	//fmt.Println("Node id: ", cs.mods.ID(), " success create a mzpropose blockhash :", block.Hash().String(), "at time: ", time.Now().UnixMilli())
 	if aggQC, ok := cert.AggQC(); ok && cs.mods.Options().ShouldUseAggQC() {
 		proposal.AggregateQC = &aggQC
 	}
@@ -146,13 +152,13 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 }
 func (cs *consensusBase) MzOnPropose(mzproposemsg MzProposeMsg) {
 
-	fmt.Println("Node id: ", cs.mods.ID(), " success received a mzpropose  --proposer:", mzproposemsg.Block.proposer,
-		" --block view: ", mzproposemsg.Block.View(), " --now view", cs.mods.Synchronizer().View(), " --block hash:", mzproposemsg.Block.hash.String(), " --last vote: ", cs.lastVote)
-	if cs.mods.ID() == mzproposemsg.Block.proposer {
-		fmt.Println("Node id: ", cs.mods.ID(), " success received a mzpropose  --proposer:", mzproposemsg.Block.proposer,
-			" --parenthash ", mzproposemsg.Block.parent.String(), " --block hash:", mzproposemsg.Block.hash.String(), " cmd_unsync size: ", len(mzproposemsg.Block.cmd_unsync))
-		cs.mods.multichainlist.GetBatchItem(mzproposemsg.Block.batchlist)
-	}
+	//fmt.Println("Node id: ", cs.mods.ID(), " success received a mzpropose  --proposer:", mzproposemsg.Block.proposer,
+	//	" --block view: ", mzproposemsg.Block.View(), " --now view", cs.mods.Synchronizer().View(), " --block hash:", mzproposemsg.Block.hash.String(), " --last vote: ", cs.lastVote)
+	//if cs.mods.ID() == mzproposemsg.Block.proposer {
+	//	fmt.Println("Node id: ", cs.mods.ID(), " success received a mzpropose  --proposer:", mzproposemsg.Block.proposer,
+	//		" --parenthash ", mzproposemsg.Block.parent.String(), " --block hash:", mzproposemsg.Block.hash.String(), " cmd_unsync size: ", len(mzproposemsg.Block.cmd_unsync))
+	//	cs.mods.multichainlist.GetBatchItem(mzproposemsg.Block.batchlist)
+	//}
 
 	cmd_sync, ok_sync := cs.mods.multichainlist.GetCmd(mzproposemsg.Block.batchlist, true)
 
@@ -316,7 +322,7 @@ func (cs *consensusBase) OnPropose(proposal ProposeMsg, list BatchList) {
 	}
 
 	leader.Vote(pc)
-	fmt.Println("Node ", cs.mods.ID(), "vote to block ", block.hash.String(), "at time: ", time.Now().UnixMilli())
+	//fmt.Println("Node ", cs.mods.ID(), "vote to block ", block.hash.String(), "at time: ", time.Now().UnixMilli())
 }
 
 func (cs *consensusBase) commit(block *Block) {
@@ -341,9 +347,15 @@ func (cs *consensusBase) commitInner(block *Block) {
 			cs.mods.Logger().Warn("Refusing to commit because parent block could not be retrieved.")
 			return
 		}
-		fmt.Println("Node id：", cs.mods.ID(), " Start commit block:", block.Hash().String(), " at time: ", time.Now().UnixMilli())
+		//fmt.Println("Node id：", cs.mods.ID(), " Start commit block:", block.Hash().String(), " at time: ", time.Now().UnixMilli())
+		cmdtest := new(clientpb.Batch)
+		err1 := proto.UnmarshalOptions{AllowPartial: true}.Unmarshal([]byte(block.cmd), cmdtest)
+		if err1 == nil {
+			cs.totalnum = cs.totalnum + len(cmdtest.GetCommands())
+		}
 		cs.mods.Logger().Debug("EXEC: ", block)
 		cs.mods.Executor().Exec(block)
+		cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime)
 		cs.bExec = block
 	}
 }

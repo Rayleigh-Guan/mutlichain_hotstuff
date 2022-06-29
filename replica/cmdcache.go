@@ -73,6 +73,10 @@ func (c *cmdCache) Get(ctx context.Context) (cmd consensus.Command, ok bool) {
 	c.mut.Lock()
 	// Get the batch. Note that we may not be able to fill the batch, but that should be fine as long as we can send
 	// at least one command.
+	if c.cache.Len() <= 0 {
+		c.mut.Unlock()
+		return "", false
+	}
 	for i := 0; i < c.batchSize; i++ {
 		elem := c.cache.Front()
 		if elem == nil {
