@@ -42,20 +42,20 @@ type consensusBase struct {
 	mut   sync.Mutex
 	bExec *Block
 
-	totalnum int
-	startime int64
+	totalnum  int
+	startime  int64
 	lastprint View
 }
 
 // New returns a new Consensus instance based on the given Rules implementation.
 func New(impl Rules) Consensus {
 	return &consensusBase{
-		impl:     impl,
-		lastVote: 0,
-		bExec:    GetGenesis(),
-		totalnum: 0,
-		startime: time.Now().UnixMilli(),
-		lastprint:0,
+		impl:      impl,
+		lastVote:  0,
+		bExec:     GetGenesis(),
+		totalnum:  0,
+		startime:  time.Now().UnixMilli(),
+		lastprint: 0,
 	}
 }
 
@@ -256,13 +256,12 @@ func (cs *consensusBase) commitInner(block *Block) error {
 	if err1 == nil {
 		cs.totalnum = cs.totalnum + len(cmdtest.GetCommands())
 	}
-	
-	
+
 	cs.mods.Logger().Debug("EXEC: ", block)
 	cs.mods.Executor().Exec(block)
-	if (block.View()-cs.lastprint>50){
-		cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime)
-		cs.lastprint=block.View()
+	if block.View()-cs.lastprint > 50 {
+		cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime, " tps: ", (float64(cs.totalnum)/float64(time.Now().UnixMilli()-cs.startime))*1000)
+		cs.lastprint = block.View()
 	}
 	cs.bExec = block
 	return nil

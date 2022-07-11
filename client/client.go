@@ -74,6 +74,8 @@ type Client struct {
 	timeout          time.Duration
 	averagelatency   float64
 	executedreq      int
+	failedreq        int
+	timeoutreq       int
 }
 
 // New returns a new Client.
@@ -93,6 +95,8 @@ func New(conf Config, builder modules.Builder) (client *Client) {
 		timeout:          conf.Timeout,
 		averagelatency:   0,
 		executedreq:      0,
+		failedreq:        0,
+		timeoutreq:       0,
 	}
 
 	grpcOpts := []grpc.DialOption{grpc.WithBlock()}
@@ -248,7 +252,7 @@ loop:
 
 		if num%1000 == 0 {
 			c.mods.Logger().Infof("%d commands sent", num)
-			c.mods.Logger().Info("executed req: ", c.executedreq, " average latency: ", c.averagelatency/float64(c.executedreq))
+			c.mods.Logger().Info("executed req: ", c.executedreq, " average latency: ", c.averagelatency/float64(c.executedreq), " failed_req: ", c.failedreq, " timeout_req: ", c.timeoutreq)
 		}
 
 	}
@@ -278,9 +282,11 @@ func (c *Client) handleCommands(ctx context.Context) (executed, failed, timeout 
 			if ok && qcError.Reason == context.DeadlineExceeded.Error() {
 				c.mods.Logger().Debug("Command timed out.")
 				timeout++
+				c.timeoutreq = timeout
 			} else if !ok || qcError.Reason != context.Canceled.Error() {
 				c.mods.Logger().Debugf("Did not get enough replies for command: %v\n", err)
 				failed++
+				c.failedreq = failed
 			}
 		} else {
 			executed++
