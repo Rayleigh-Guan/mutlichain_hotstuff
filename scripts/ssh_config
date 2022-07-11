@@ -1,0 +1,28 @@
+# ssh_config used with the controller container
+
+Host 172.19.160.94
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 172.19.160.95
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 172.19.160.96
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 172.19.160.97
+ User root
+ IdentityFile ~/.ssh/id_rsa
+
+
+Host 139.224.200.245
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 47.103.207.29
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 139.224.201.74
+ User root
+ IdentityFile ~/.ssh/id_rsa
+Host 47.103.221.141
+ User root
+ IdentityFile ~/.ssh/id_rsa
