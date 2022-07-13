@@ -112,6 +112,8 @@ func (w *Worker) createReplicas(req *orchestrationpb.CreateReplicaRequest) (*orc
 		}
 
 		// set up listeners and get the ports
+		//b := strconv.Itoa(int(cfg.GetID())*2 + 30010)
+		//replicaListener, err := net.Listen("tcp", ":"+string(b))
 		replicaListener, err := net.Listen("tcp", ":0")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create listener: %w", err)
@@ -120,6 +122,8 @@ func (w *Worker) createReplicas(req *orchestrationpb.CreateReplicaRequest) (*orc
 		if err != nil {
 			return nil, err
 		}
+		//c := strconv.Itoa(int(cfg.GetID())*2 + 1 + 30010)
+		//clientListener, err := net.Listen("tcp", ":"+string(c))
 		clientListener, err := net.Listen("tcp", ":0")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create listener: %w", err)

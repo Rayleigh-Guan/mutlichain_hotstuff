@@ -81,7 +81,10 @@ func (m *MockReplica) Vote(arg0 consensus.PartialCert) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Vote", arg0)
 }
-
+func (m *MockReplica) ProposeEcBatchUniCast(arg0 *consensus.EcBatch) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ProposeBatchUniCast", arg0)
+}
 // Vote indicates an expected call of Vote.
 func (mr *MockReplicaMockRecorder) Vote(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

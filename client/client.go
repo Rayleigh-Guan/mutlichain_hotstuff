@@ -28,7 +28,7 @@ type qspec struct {
 	faulty int
 }
 
-func (q *qspec) ExecCommandQF(_ *clientpb.Command, signatures map[uint32]*emptypb.Empty) (*emptypb.Empty, bool) {
+func (q *qspec) ExecCommandQF(_ *clientpb.Command, signatures map[uint32]*emptypb.Empty) (*emptypb.Empty, bool) { //Verify the number of replies received
 	if len(signatures) < 1 {
 		return nil, false
 	}
@@ -73,6 +73,9 @@ type Client struct {
 	stepUpInterval   time.Duration
 	timeout          time.Duration
 	averagelatency   float64
+	executedreq      int
+	failedreq        int
+	timeoutreq       int
 }
 
 // New returns a new Client.
@@ -91,6 +94,9 @@ func New(conf Config, builder modules.Builder) (client *Client) {
 		stepUpInterval:   conf.RateStepInterval,
 		timeout:          conf.Timeout,
 		averagelatency:   0,
+		executedreq:      0,
+		failedreq:        0,
+		timeoutreq:       0,
 	}
 
 	grpcOpts := []grpc.DialOption{grpc.WithBlock()}
@@ -114,10 +120,15 @@ func New(conf Config, builder modules.Builder) (client *Client) {
 // Connect connects the client to the replicas.
 func (c *Client) Connect(replicas []backend.ReplicaInfo) (err error) {
 	nodes := make(map[string]uint32, 1)
+	ye := false //Check if all clients have found the replica that corresponds to them
 	for _, r := range replicas {
-		if r.ID%4 == c.mods.ID()%4 {
+		if r.ID%4 == c.mods.ID()%4 { //mustdo:when change node number
 			nodes[r.Address] = uint32(r.ID)
+			ye = true
 		}
+	}
+	if !ye {
+		c.mods.Logger().Info("Failed to ")
 	}
 	c.gorumsConfig, err = c.mgr.NewConfiguration(&qspec{faulty: hotstuff.NumFaulty(len(replicas))}, gorums.WithNodeMap(nodes))
 	if err != nil {
@@ -246,9 +257,9 @@ loop:
 			break loop
 		}
 
-		if num%1000 == 0 {
+		if num%5000 == 0 {
 			c.mods.Logger().Infof("%d commands sent", num)
-			c.mods.Logger().Info("excuted req: ", c.highestCommitted, " average latency: ", c.averagelatency/float64(c.highestCommitted))
+			c.mods.Logger().Info("executed_req: ", c.executedreq, " average latency: ", c.averagelatency/float64(c.executedreq), " failed_req: ", c.failedreq, " timeout_req: ", c.timeoutreq)
 		}
 
 	}
@@ -278,12 +289,17 @@ func (c *Client) handleCommands(ctx context.Context) (executed, failed, timeout 
 			if ok && qcError.Reason == context.DeadlineExceeded.Error() {
 				c.mods.Logger().Debug("Command timed out.")
 				timeout++
+				c.timeoutreq = timeout
 			} else if !ok || qcError.Reason != context.Canceled.Error() {
-				c.mods.Logger().Debugf("Did not get enough replies for command: %v\n", err)
+				c.mods.Logger().Debugf("Did not get enough replies for command: %v\n", err) //failed
 				failed++
+				c.failedreq = failed
 			}
 		} else {
 			executed++
+			c.executedreq = executed
+			duration := time.Since(cmd.sendTime)
+			c.averagelatency = c.averagelatency + float64(duration.Milliseconds())
 		}
 		c.mut.Lock()
 		if cmd.sequenceNumber > c.highestCommitted {
@@ -292,7 +308,7 @@ func (c *Client) handleCommands(ctx context.Context) (executed, failed, timeout 
 		c.mut.Unlock()
 
 		duration := time.Since(cmd.sendTime)
-		c.averagelatency = (c.averagelatency + float64(duration.Milliseconds()))
+		//c.averagelatency = (c.averagelatency + float64(duration.Milliseconds()))
 		c.mods.EventLoop().AddEvent(LatencyMeasurementEvent{Latency: duration})
 	}
 }

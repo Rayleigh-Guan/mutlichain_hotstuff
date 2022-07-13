@@ -1,0 +1,160 @@
+syntax = "proto3";
+
+package hotstuffpb;
+
+import "gorums.proto";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/relab/hotstuff/internal/proto/hotstuffpb";
+
+service Hotstuff {
+  rpc Propose(Proposal) returns (google.protobuf.Empty) {
+    option (gorums.multicast) = true;
+  }
+
+  rpc Vote(PartialCert) returns (google.protobuf.Empty) {
+    option (gorums.unicast) = true;
+  }
+
+  rpc Timeout(TimeoutMsg) returns (google.protobuf.Empty) {
+    option (gorums.multicast) = true;
+  }
+
+  rpc NewView(SyncInfo) returns (google.protobuf.Empty) {
+    option (gorums.unicast) = true;
+  }
+
+  rpc Fetch(BlockHash) returns (Block) { option (gorums.quorumcall) = true; }
+
+  rpc ProposeBatchMultiCast(Batch) returns (google.protobuf.Empty){
+    option (gorums.multicast) = true;
+  }
+  rpc MzPropose(MzProposal) returns (google.protobuf.Empty) {
+    option (gorums.multicast) = true;
+  }
+  rpc ProposeEcBatchUniCast(EcBatch) returns (google.protobuf.Empty){
+    option (gorums.unicast) = true;
+  }
+  rpc ProposeEcBatchMultiCast(EcBatch) returns (google.protobuf.Empty){
+    option (gorums.multicast) = true;
+  }
+}
+
+message Proposal {
+  Block Block = 1;
+  optional AggQC AggQC = 2;
+}
+message MzProposal {
+  MzBlock Block = 1;
+  optional AggQC AggQC = 2;
+}
+message BatchListitem {
+  int32 StartHeight =1;
+  int32 EndHeight=2   ;
+  uint32  NodeID=3;
+  bool  UseBatchHash=4;
+}
+
+// Batch is a list of commands to be executed
+message BatchList { repeated BatchListitem BatchListitems = 1; }
+
+
+message Batch{
+  bytes Parent = 1;
+  uint32 NodeID = 2;
+  bytes Cmd = 3;
+  bytes Hash = 4;
+  int32 BatchID =5;
+  map<uint32,int32>ChainPoolTip=6;
+}
+message EcBatch{
+  uint32 NodeID = 1;
+  uint32 FromID=2;
+  int32 BatchID =3;
+  int32 Order=4;
+  repeated int32 RealLen=5;
+  bytes Data=6;
+}
+message BlockHash { bytes Hash = 1; }
+
+message Block {
+  bytes Parent = 1;
+  QuorumCert QC = 2;
+  uint64 View = 3;
+  bytes Command = 4;
+  uint32 Proposer = 5;
+}
+message MzBlock{
+  bytes Parent = 1;
+  QuorumCert QC = 2;
+  uint64 View = 3;
+  bytes BatchList = 4;
+  bytes CmdUnSync = 5;
+  uint32 Proposer = 6;
+  bytes Hash = 7;
+}
+
+message ECDSASignature {
+  uint32 Signer = 1;
+  bytes R = 2;
+  bytes S = 3;
+}
+
+message BLS12Signature { bytes Sig = 1; }
+
+message Signature {
+  oneof Sig {
+    ECDSASignature ECDSASig = 1;
+    BLS12Signature BLS12Sig = 2;
+  }
+}
+
+message PartialCert {
+  Signature Sig = 1;
+  bytes Hash = 2;
+}
+
+message ECDSAThresholdSignature { repeated ECDSASignature Sigs = 1; }
+
+message BLS12AggregateSignature {
+  bytes Sig = 1;
+  bytes participants = 2;
+}
+
+message ThresholdSignature {
+  oneof AggSig {
+    ECDSAThresholdSignature ECDSASigs = 1;
+    BLS12AggregateSignature BLS12Sig = 2;
+  }
+}
+
+message QuorumCert {
+  ThresholdSignature Sig = 1;
+  uint64 View = 2;
+  bytes Hash = 3;
+}
+
+message TimeoutCert {
+  ThresholdSignature Sig = 1;
+  uint64 View = 2;
+}
+
+message TimeoutMsg {
+  uint64 View = 1;
+  SyncInfo SyncInfo = 2;
+  Signature ViewSig = 3;
+  optional Signature MsgSig = 4;
+}
+
+message SyncInfo {
+  optional QuorumCert QC = 1;
+  optional TimeoutCert TC = 2;
+  optional AggQC AggQC = 3;
+}
+
+message AggQC {
+  map<uint32, QuorumCert> QCs = 1;
+  ThresholdSignature Sig = 2;
+  uint64 View = 3;
+}

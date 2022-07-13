@@ -138,6 +138,19 @@ func (impl *serviceImpl) ProposeBatchMultiCast(ctx gorums.ServerCtx, request *ho
 	impl.srv.mods.EventLoop().AddEvent(b)
 	//return nil
 }
+func (impl *serviceImpl) ProposeEcBatchUniCast(ctx gorums.ServerCtx, request *hotstuffpb.EcBatch) {
+
+	b := hotstuffpb.EcBatchFromProto(request)
+
+	impl.srv.mods.EventLoop().AddEvent(b)
+	//return nil
+}
+func (impl *serviceImpl) ProposeEcBatchMultiCast(ctx gorums.ServerCtx, request *hotstuffpb.EcBatch) {
+	b := hotstuffpb.EcBatchFromProto(request)
+
+	impl.srv.mods.EventLoop().AddEvent(b)
+	//return nil
+}
 func (impl *serviceImpl) MzPropose(ctx gorums.ServerCtx, proposal *hotstuffpb.MzProposal) {
 
 	id, err := GetPeerIDFromContext(ctx, impl.srv.mods.Configuration())

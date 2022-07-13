@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/relab/hotstuff"
+	"github.com/relab/hotstuff/logging"
 	"github.com/relab/hotstuff/modules"
 )
 
@@ -214,9 +215,10 @@ type MulChain interface {
 	// If no command is available, the 'ok' return value should be false.
 	Add(id hotstuff.ID, b *Batch)
 	PackList() (batchlist BatchList, ok bool)
-	GetCmd(batchlist BatchList, cmdType bool) (cmd Command, ok bool)
+	GetCmd(batchlist BatchList, cmdType bool, cslogger logging.Logger) (cmd Command, ok bool)
 	UpdatePackagedHeight(batchlist BatchList)
-	GetBatchItem(batchlist BatchList)
+	//GetBatchItem(batchlist BatchList)
+	AddEcBatch(batch *EcBatch)
 }
 
 //go:generate mockgen -destination=../internal/mocks/acceptor_mock.go -package=mocks . Acceptor
@@ -347,6 +349,8 @@ type Replica interface {
 	Vote(cert PartialCert)
 	// NewView sends the quorum certificate to the other replica.
 	NewView(SyncInfo)
+	// uinicast batch
+	ProposeEcBatchUniCast(batch *EcBatch)
 }
 
 //go:generate mockgen -destination=../internal/mocks/configuration_mock.go -package=mocks . Configuration
@@ -371,6 +375,7 @@ type Configuration interface {
 	////广播发送Batch
 	ProposeBatchMultiCast(batch *Batch)
 	MzPropose(proposal MzProposeMsg)
+	ProposeEcBatchMultiCast(batch *EcBatch)
 	////单播发送Batch
 	//ProposeBatch_unicast(batch *Batch)
 }

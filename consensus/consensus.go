@@ -2,10 +2,11 @@ package consensus
 
 import (
 	"fmt"
-	"github.com/relab/hotstuff/internal/proto/clientpb"
-	"google.golang.org/protobuf/proto"
 	"sync"
 	"time"
+
+	"github.com/relab/hotstuff/internal/proto/clientpb"
+	"google.golang.org/protobuf/proto"
 )
 
 // Rules is the minimum interface that a consensus implementations must implement.
@@ -41,6 +42,7 @@ type consensusBase struct {
 	batchlistinblock map[Hash]*BatchList
 	totalnum         int
 	startime         int64
+	lastprint        View
 }
 
 // New returns a new Consensus instance based on the given Rules implementation.
@@ -52,6 +54,7 @@ func New(impl Rules) Consensus {
 		batchlistinblock: make(map[Hash]*BatchList),
 		totalnum:         0,
 		startime:         time.Now().UnixMilli(),
+		lastprint:        0,
 	}
 }
 
@@ -75,12 +78,22 @@ func (cs *consensusBase) InitConsensusModule(mods *Modules, opts *OptionsBuilder
 	cs.mods.EventLoop().RegisterHandler(MzProposeMsg{}, func(event interface{}) {
 		cs.MzOnPropose(event.(MzProposeMsg))
 	})
+	cs.mods.EventLoop().RegisterHandler(EcBatch{}, func(event interface{}) {
+		cs.OnEcBatch(event.(EcBatch))
+	})
 }
 
 func (cs *consensusBase) OnProposeBatch(batch Batch) {
 	//cs.mods.MultichainList().Add(batch.NodeID, &batch)
 	cs.mods.multichainlist.Add(batch.NodeID, &batch)
 	//cs.mods.Logger().Info(batch.BatchID, batch.NodeID)
+}
+func (cs *consensusBase) OnEcBatch(batch EcBatch) {
+	cs.mods.multichainlist.AddEcBatch(&batch)
+	if batch.NodeID == batch.FromID {
+		batch.FromID = cs.mods.ID()
+		cs.mods.Configuration().ProposeEcBatchMultiCast(&batch)
+	}
 }
 
 // StopVoting ensures that no voting happens in a view earlier than `view`.
@@ -112,9 +125,8 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 		cs.mods.Logger().Debug("Propose: No command")
 		return
 	}
-
-	cmd_sync, ok_sync := cs.mods.multichainlist.GetCmd(batchlist, true)
-	cmd_unsync, ok_unsync := cs.mods.multichainlist.GetCmd(batchlist, false)
+	cmd_sync, ok_sync := cs.mods.multichainlist.GetCmd(batchlist, true, cs.mods.Logger())
+	cmd_unsync, ok_unsync := cs.mods.multichainlist.GetCmd(batchlist, false, cs.mods.Logger())
 
 	cmd := cmd_sync + cmd_unsync
 	if !ok_sync && !ok_unsync {
@@ -123,6 +135,7 @@ func (cs *consensusBase) MzPropose(cert SyncInfo) {
 		} else {
 			fmt.Println("Node id: ", cs.mods.ID(), "--Mzpropose error: GetCmd --error reason Unknown  --parent hash:", cs.mods.Synchronizer().LeafBlock().Hash().String(), " ---View", cs.mods.Synchronizer().View())
 		}
+		return
 	}
 
 	block := NewBlock(cs.mods.Synchronizer().LeafBlock().Hash(), qc, cmd, cs.mods.Synchronizer().View(), cs.mods.ID())
@@ -160,7 +173,7 @@ func (cs *consensusBase) MzOnPropose(mzproposemsg MzProposeMsg) {
 	//	cs.mods.multichainlist.GetBatchItem(mzproposemsg.Block.batchlist)
 	//}
 
-	cmd_sync, ok_sync := cs.mods.multichainlist.GetCmd(mzproposemsg.Block.batchlist, true)
+	cmd_sync, ok_sync := cs.mods.multichainlist.GetCmd(mzproposemsg.Block.batchlist, true, cs.mods.Logger())
 
 	if !ok_sync {
 		return
@@ -275,13 +288,13 @@ func (cs *consensusBase) OnPropose(proposal ProposeMsg, list BatchList) {
 		cs.mods.Logger().Info("OnPropose: Failed to fetch qcBlock")
 	}
 
-	if !cs.mods.Acceptor().Accept(block.Command()) {
-		cs.mods.Logger().Info("OnPropose: command not accepted ", block.hash.String())
-		return
-	}
+	// if !cs.mods.Acceptor().Accept(block.Command()) {
+	// 	cs.mods.Logger().Info("OnPropose: command not accepted ", block.hash.String())
+	// 	return
+	// }
 
 	// block is safe and was accepted
-	cs.mods.multichainlist.UpdatePackagedHeight(list)
+
 	cs.mods.BlockChain().Store(block)
 	//fmt.Println("Node: ", cs.mods.ID(), " stores block ", block.hash.String())
 	//block.cert.hash = block.Hash()
@@ -320,7 +333,7 @@ func (cs *consensusBase) OnPropose(proposal ProposeMsg, list BatchList) {
 		cs.mods.Logger().Warnf("Replica with ID %d was not found!", leaderID)
 		return
 	}
-
+	cs.mods.multichainlist.UpdatePackagedHeight(list)
 	leader.Vote(pc)
 	//fmt.Println("Node ", cs.mods.ID(), "vote to block ", block.hash.String(), "at time: ", time.Now().UnixMilli())
 }
@@ -355,7 +368,10 @@ func (cs *consensusBase) commitInner(block *Block) {
 		}
 		cs.mods.Logger().Debug("EXEC: ", block)
 		cs.mods.Executor().Exec(block)
-		cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime)
+		if block.View()-cs.lastprint > 50 {
+			cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime, "Tps: ", (float64(cs.totalnum)/float64(time.Now().UnixMilli()-cs.startime))*1000)
+			cs.lastprint = block.View()
+		}
 		cs.bExec = block
 	}
 }

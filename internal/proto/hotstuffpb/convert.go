@@ -314,12 +314,12 @@ func SyncInfoToProto(syncInfo consensus.SyncInfo) *SyncInfo {
 }
 func BatchToProto(batch *consensus.Batch) *Batch {
 	p := &Batch{
-		Parent:       []byte(batch.Parent[:]),
+		Parent:       batch.Parent[:],
 		NodeID:       uint32(batch.NodeID),
 		Cmd:          []byte(batch.Cmd),
-		Hash:         []byte(batch.Hash[:]),
-		BatchID:      int32(batch.BatchID),
-		ChainPoolTip: map[uint32]int32(batch.ChainPoolTip),
+		Hash:         batch.Hash[:],
+		BatchID:      batch.BatchID,
+		ChainPoolTip: batch.ChainPoolTip,
 	}
 	//fmt.Println("send batchid: ", batch.BatchID, " --convert id:", batch.BatchID, " --from", batch.NodeID)
 	return p
@@ -339,7 +339,31 @@ func BatchFromProto(batch *Batch) (a consensus.Batch) {
 
 	a.BatchID = batch.BatchID
 
-	a.ChainPoolTip = map[uint32]int32(batch.ChainPoolTip)
+	a.ChainPoolTip = batch.ChainPoolTip
+	//fmt.Println("received batchid: ", batch.BatchID, " --convert id:", a.BatchID, " --from", a.NodeID)
+	return
+}
+func EcBatchToProto(batch *consensus.EcBatch) *EcBatch {
+	p := &EcBatch{
+		NodeID:  uint32(batch.NodeID),
+		FromID:  uint32(batch.FromID),
+		BatchID: batch.BatchID,
+		Order:   batch.Order,
+		RealLen: batch.RealLen,
+		Data:    batch.Data,
+	}
+	//fmt.Println("send batchid: ", batch.BatchID, " --convert id:", batch.BatchID, " --from", batch.NodeID)
+	return p
+}
+func EcBatchFromProto(batch *EcBatch) (a consensus.EcBatch) {
+	//fmt.Println("try received batchid: ", batch.BatchID, " --convert id:", a.BatchID, " --from", a.NodeID)
+
+	a.NodeID = hotstuff.ID(batch.NodeID)
+	a.FromID = hotstuff.ID(batch.FromID)
+	a.BatchID = batch.BatchID
+	a.Order = batch.Order
+	a.RealLen = batch.RealLen
+	a.Data = batch.Data
 	//fmt.Println("received batchid: ", batch.BatchID, " --convert id:", a.BatchID, " --from", a.NodeID)
 	return
 }

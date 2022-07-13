@@ -300,6 +300,9 @@ func (r *replica) Vote(cert consensus.PartialCert) {
 		PartialCert: cert,
 	})
 }
+func (r *replica) ProposeEcBatchUniCast(cert *consensus.EcBatch) { //todo
+	r.config.sendMessage(r.id, consensus.EcBatch{})
+}
 
 // NewView sends the quorum certificate to the other replica.
 func (r *replica) NewView(si consensus.SyncInfo) {

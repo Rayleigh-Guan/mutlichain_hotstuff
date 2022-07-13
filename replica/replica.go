@@ -5,6 +5,11 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
+	"math/rand"
+	"net"
+	"time"
+
 	"github.com/relab/gorums"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/backend"
@@ -12,8 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"net"
-	"time"
 )
 
 // cmdID is a unique identifier for a command
@@ -127,22 +130,48 @@ func (srv *Replica) Connect(replicas []backend.ReplicaInfo) error {
 func (srv *Replica) Start() {
 	var ctx context.Context
 	ctx, srv.cancel = context.WithCancel(context.Background())
-
+	predisFull := true
 	go func() {
 		lasttime := time.Now()
+		var unicastOrder []int
+		unicastOrder = make([]int, srv.mulChain.ReplicaNum)
+		for i := 0; i < srv.mulChain.ReplicaNum; i++ {
+			unicastOrder[i] = i + 1
+		}
 		for {
 			select {
 			case <-ctx.Done():
 			default:
-
-				if time.Now().Sub(lasttime) > 5*time.Millisecond {
+				if time.Now().Sub(lasttime) > 3*time.Millisecond {
 					lasttime = time.Now()
 					batch, ok := srv.mulChain.packBatch(ctx, srv.clientSrv.cmdCache)
 					if ok { //|| srv.mulChain.CanUpdateMyTip {
 						srv.mulChain.Add(srv.mulChain.NodeID, &batch)
-						//println("nodeid:", srv.mulChain.NodeID, "  success pack a batch,batchsize:", batch.BatchID)
-						srv.hs.Configuration().ProposeBatchMultiCast(&batch)
-						//srv.hs.Configuration().ProposeBatch_unicast(batchmsg)
+						//srv.hs.Configuration().ProposeBatchMultiCast(&batch)
+						if predisFull {
+							//println("nodeid:", srv.mulChain.NodeID, "  success pack a batch,batchsize:", batch.BatchID)
+							srv.hs.Configuration().ProposeBatchMultiCast(&batch)
+							//srv.hs.Configuration().ProposeBatch_unicast(batchmsg)
+						} else {
+							EcmatrixReplica, reallenReplica := srv.mulChain.Ecencode(batch)
+							rand.Seed(time.Now().UnixNano())
+							rand.Shuffle(len(unicastOrder), func(i, j int) { unicastOrder[i], unicastOrder[j] = unicastOrder[j], unicastOrder[i] })
+							//fmt.Println("--send: Node id: ", srv.mulChain.NodeID, " Batchid: ", batch.BatchID, "reaLen: ", reallenReplica)
+							for i := 0; i < srv.mulChain.ReplicaNum; i++ {
+								//fmt.Println("--send: Node id: ", srv.mulChain.NodeID, " Batchid: ", batch.BatchID, "order: ", i, " len:", len(EcmatrixReplica[i]))
+								//if hotstuff.ID(unicast_order[i]) == srv.mulChain.NodeID {
+								//	continue
+								//}
+								node, ok := srv.hs.Configuration().Replica(hotstuff.ID(unicastOrder[i]))
+								if ok {
+									Ecbatch := consensus.NewEcBatch(srv.mulChain.NodeID, srv.mulChain.NodeID, batch.BatchID, int32(i), reallenReplica, EcmatrixReplica[i])
+									node.ProposeEcBatchUniCast(Ecbatch)
+								} else {
+									fmt.Println("unicast faild from: ", srv.mulChain.NodeID, " to: ", unicastOrder[i])
+								}
+							}
+						}
+
 					}
 				}
 			}

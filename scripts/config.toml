@@ -1,0 +1,30 @@
+clients = 16
+replicas = 16
+
+hosts = [ 
+  	"172.19.160.94",
+	"172.19.160.95",
+	"172.19.160.96",
+	"172.19.160.97",
+]
+
+# specific assingments for some hosts
+[[hosts-config]]
+name = "172.19.160.94"
+clients = 4
+replicas = 4
+
+[[hosts-config]]
+name = "172.19.160.95"
+clients = 4
+replicas = 4
+
+[[hosts-config]]
+name = "172.19.160.96"
+clients = 4
+replicas = 4
+
+[[hosts-config]]
+name = "172.19.160.97"
+clients = 4
+replicas = 4

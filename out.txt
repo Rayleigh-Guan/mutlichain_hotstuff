@@ -1,0 +1,8 @@
+Node Id: 3  commit rule errors because can not find new block's grandparent --new block hash: WV4oBFYVTheYElPweZbHfB2jKqJTv5tKSGL1DouAi3E=  --grandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 2  commit rule errors because can not find new block's grandparent --new block hash: WV4oBFYVTheYElPweZbHfB2jKqJTv5tKSGL1DouAi3E=  --grandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 4  commit rule errors because can not find new block's grandparent --new block hash: WV4oBFYVTheYElPweZbHfB2jKqJTv5tKSGL1DouAi3E=  --grandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 1  commit rule errors because can not find new block's grandparent --new block hash: WV4oBFYVTheYElPweZbHfB2jKqJTv5tKSGL1DouAi3E=  --grandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 3  commit rule errors because can not find new block's ggrandparent --new block hash: 1CatCYQlPTKVy/G2g9EqaRM2GNg68P9DUjXyHhibh5A=  --ggrandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 1  commit rule errors because can not find new block's ggrandparent --new block hash: 1CatCYQlPTKVy/G2g9EqaRM2GNg68P9DUjXyHhibh5A=  --ggrandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 2  commit rule errors because can not find new block's ggrandparent --new block hash: 1CatCYQlPTKVy/G2g9EqaRM2GNg68P9DUjXyHhibh5A=  --ggrandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+Node Id: 4  commit rule errors because can not find new block's ggrandparent --new block hash: 1CatCYQlPTKVy/G2g9EqaRM2GNg68P9DUjXyHhibh5A=  --ggrandparent block hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

@@ -200,6 +200,20 @@ func (c *Configuration) MzPropose(ctx context.Context, in *MzProposal, opts ...g
 	c.RawConfiguration.Multicast(ctx, cd, opts...)
 }
 
+// Reference imports to suppress errors if they are not otherwise used.
+var _ emptypb.Empty
+
+// ProposeEcBatchMultiCast is a quorum call invoked on all nodes in configuration c,
+// with the same argument in, and returns a combined result.
+func (c *Configuration) ProposeEcBatchMultiCast(ctx context.Context, in *EcBatch, opts ...gorums.CallOption) {
+	cd := gorums.QuorumCallData{
+		Message: in,
+		Method:  "hotstuffpb.Hotstuff.ProposeEcBatchMultiCast",
+	}
+
+	c.RawConfiguration.Multicast(ctx, cd, opts...)
+}
+
 // QuorumSpec is the interface of quorum functions for Hotstuff.
 type QuorumSpec interface {
 	gorums.ConfigOption
@@ -243,6 +257,8 @@ type Hotstuff interface {
 	Fetch(ctx gorums.ServerCtx, request *BlockHash) (response *Block, err error)
 	ProposeBatchMultiCast(ctx gorums.ServerCtx, request *Batch)
 	MzPropose(ctx gorums.ServerCtx, request *MzProposal)
+	ProposeEcBatchUniCast(ctx gorums.ServerCtx, request *EcBatch)
+	ProposeEcBatchMultiCast(ctx gorums.ServerCtx, request *EcBatch)
 }
 
 func RegisterHotstuffServer(srv *gorums.Server, impl Hotstuff) {
@@ -282,6 +298,16 @@ func RegisterHotstuffServer(srv *gorums.Server, impl Hotstuff) {
 		defer ctx.Release()
 		impl.MzPropose(ctx, req)
 	})
+	srv.RegisterHandler("hotstuffpb.Hotstuff.ProposeEcBatchUniCast", func(ctx gorums.ServerCtx, in *gorums.Message, _ chan<- *gorums.Message) {
+		req := in.Message.(*EcBatch)
+		defer ctx.Release()
+		impl.ProposeEcBatchUniCast(ctx, req)
+	})
+	srv.RegisterHandler("hotstuffpb.Hotstuff.ProposeEcBatchMultiCast", func(ctx gorums.ServerCtx, in *gorums.Message, _ chan<- *gorums.Message) {
+		req := in.Message.(*EcBatch)
+		defer ctx.Release()
+		impl.ProposeEcBatchMultiCast(ctx, req)
+	})
 }
 
 type internalBlock struct {
@@ -313,6 +339,20 @@ func (n *Node) NewView(ctx context.Context, in *SyncInfo, opts ...gorums.CallOpt
 	cd := gorums.CallData{
 		Message: in,
 		Method:  "hotstuffpb.Hotstuff.NewView",
+	}
+
+	n.RawNode.Unicast(ctx, cd, opts...)
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ emptypb.Empty
+
+// ProposeEcBatchUniCast is a quorum call invoked on all nodes in configuration c,
+// with the same argument in, and returns a combined result.
+func (n *Node) ProposeEcBatchUniCast(ctx context.Context, in *EcBatch, opts ...gorums.CallOption) {
+	cd := gorums.CallData{
+		Message: in,
+		Method:  "hotstuffpb.Hotstuff.ProposeEcBatchUniCast",
 	}
 
 	n.RawNode.Unicast(ctx, cd, opts...)

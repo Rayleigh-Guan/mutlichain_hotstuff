@@ -17,11 +17,12 @@ import (
 
 // Replica provides methods used by hotstuff to send messages to replicas.
 type Replica struct {
-	node          *hotstuffpb.Node
-	id            hotstuff.ID
-	pubKey        consensus.PublicKey
-	voteCancel    context.CancelFunc
-	newviewCancel context.CancelFunc
+	node                    *hotstuffpb.Node
+	id                      hotstuff.ID
+	pubKey                  consensus.PublicKey
+	voteCancel              context.CancelFunc
+	newviewCancel           context.CancelFunc
+	proposeEcbatchuniCancel context.CancelFunc
 }
 
 // ID returns the replica's ID.
@@ -56,6 +57,16 @@ func (r *Replica) NewView(msg consensus.SyncInfo) {
 	ctx, r.newviewCancel = context.WithCancel(context.Background())
 	r.node.NewView(ctx, hotstuffpb.SyncInfoToProto(msg), gorums.WithNoSendWaiting())
 }
+func (r *Replica) ProposeEcBatchUniCast(Ecbatch *consensus.EcBatch) {
+	if r.node == nil {
+		return
+	}
+	var ctx context.Context
+	ctx, r.proposeEcbatchuniCancel = context.WithCancel(context.Background())
+	p := hotstuffpb.EcBatchToProto(Ecbatch)
+	//fmt.Println("Node ", cfg.mods.ID(), " start to multicast batch ", batch.BatchID)
+	r.node.ProposeEcBatchUniCast(ctx, p, gorums.WithNoSendWaiting())
+}
 
 // Config holds information about the current configuration of replicas that participate in the protocol,
 // and some information about the local replica. It also provides methods to send messages to the other replicas.
@@ -63,13 +74,14 @@ type Config struct {
 	mods    *consensus.Modules
 	optsPtr *[]gorums.ManagerOption // using a pointer so that options can be GCed after initialization
 
-	mgr                   *hotstuffpb.Manager
-	cfg                   *hotstuffpb.Configuration
-	replicas              map[hotstuff.ID]consensus.Replica
-	proposeCancel         context.CancelFunc
-	mzproposeCancel       context.CancelFunc
-	proposebatchmulCancel context.CancelFunc
-	timeoutCancel         context.CancelFunc
+	mgr                     *hotstuffpb.Manager
+	cfg                     *hotstuffpb.Configuration
+	replicas                map[hotstuff.ID]consensus.Replica
+	proposeCancel           context.CancelFunc
+	mzproposeCancel         context.CancelFunc
+	proposebatchmulCancel   context.CancelFunc
+	timeoutCancel           context.CancelFunc
+	proposeEcbatchmulCancel context.CancelFunc
 }
 
 // InitConsensusModule gives the module a reference to the Modules object.
@@ -128,10 +140,11 @@ func (cfg *Config) Connect(replicas []ReplicaInfo) (err error) {
 	for _, replica := range replicas {
 		// also initialize Replica structures
 		cfg.replicas[replica.ID] = &Replica{
-			id:            replica.ID,
-			pubKey:        replica.PubKey,
-			newviewCancel: func() {},
-			voteCancel:    func() {},
+			id:                      replica.ID,
+			pubKey:                  replica.PubKey,
+			newviewCancel:           func() {},
+			voteCancel:              func() {},
+			proposeEcbatchuniCancel: func() {},
 		}
 		// we do not want to connect to ourself
 		if replica.ID != cfg.mods.ID() {
@@ -188,6 +201,17 @@ func (cfg *Config) ProposeBatchMultiCast(batch *consensus.Batch) {
 	p := hotstuffpb.BatchToProto(batch)
 	//fmt.Println("Node ", cfg.mods.ID(), " start to multicast batch ", batch.BatchID)
 	cfg.cfg.ProposeBatchMultiCast(ctx, p, gorums.WithNoSendWaiting())
+}
+func (cfg *Config) ProposeEcBatchMultiCast(batch *consensus.EcBatch) {
+	if cfg.cfg == nil {
+		return
+	}
+	var ctx context.Context
+	// cfg.proposebatchmulCancel()
+	ctx, cfg.proposeEcbatchmulCancel = context.WithCancel(context.Background())
+	p := hotstuffpb.EcBatchToProto(batch)
+	//fmt.Println("Node ", cfg.mods.ID(), " start to multicast batch ", batch.BatchID)
+	cfg.cfg.ProposeEcBatchMultiCast(ctx, p, gorums.WithNoSendWaiting())
 }
 
 //func (cfg *Config) ProposeBatch_unicast(batch *consensus.Batch) {
