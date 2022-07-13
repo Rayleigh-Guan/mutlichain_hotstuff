@@ -369,7 +369,7 @@ func (cs *consensusBase) commitInner(block *Block) {
 		cs.mods.Logger().Debug("EXEC: ", block)
 		cs.mods.Executor().Exec(block)
 		if block.View()-cs.lastprint > 50 {
-			cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime, "Tps: ", (float64(cs.totalnum)/float64(time.Now().UnixMilli()-cs.startime))*1000)
+			cs.mods.Logger().Info("EXEC req: ", cs.totalnum, " use time(ms): ", time.Now().UnixMilli()-cs.startime, " Tps: ", (float64(cs.totalnum)/float64(time.Now().UnixMilli()-cs.startime))*1000)
 			cs.lastprint = block.View()
 		}
 		cs.bExec = block
